@@ -1,0 +1,37 @@
+{
+    "manifest_version": 2,
+    "name": "Basquet Catala Stats Extractor",
+    "version": "1.0",
+    "description": "Extrae estadísticas detalladas de partidos de Basquet Catala.",
+    
+    "icons": {
+        "48": "icon-48.png" 
+    },
+
+    "background": {
+        "scripts": ["src/background.js"], 
+        "persistent": false
+    },
+    
+    "permissions": [
+        "webRequest", 
+        "webRequestBlocking", 
+        "https://www.basquetcatala.cat/*", 
+        "https://msstats.optimalwayconsulting.com/*",
+        "https://streaming.optimalwayconsulting.com/*"
+    ],
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'; connect-src * https://streaming.optimalwayconsulting.com;"
+    },
+    "content_scripts": [ 
+        {
+            "matches": ["https://www.basquetcatala.cat/directe/*"],
+            "js": [
+                "src/content/dom.js",    // 1. Funciones de DOM (para que estén disponibles)
+                "src/content/data.js",   // 2. Lógica de datos (que usa funciones de dom.js)
+                "src/content/index.js"   // 3. Punto de inicio (que llama a una función de data.js)
+            ],
+            "run_at": "document_idle"
+        }
+    ]
+}
