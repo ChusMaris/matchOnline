@@ -103,7 +103,7 @@ function generatePlayerListHTML(players, teamColor) {
                 <tbody>
                     ${sortedPlayers.map(player => `
                         <tr style="border-bottom: 1px dashed #eee;">
-                            <td style="padding: 4px 0; font-weight: bold; color: #555;">${player.dorsal}</td>
+                            <td style="padding: 4px 0; font-weight: bold; color: #555; text-align: center;">${player.dorsal}</td>
                             <td style="padding: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${player.name}</td>
                             <td style="padding: 4px 0; text-align: center; font-weight: bold;">${player.points}</td>
                             <td style="padding: 4px 0; text-align: center;">${player.timePlayed || '-'}</td>
@@ -153,20 +153,31 @@ function injectScoreboard(localName, localScore, visitName, visitScore, localPla
                         <!-- Bloque 1: Marcador (Resultado) -->
                         <div style="
                             display: flex;
-                            justify-content: space-around; /* Changed to space-around for better spacing between team names */
-                            align-items: center;
-                            text-align: center;
+                            flex-direction: column; /* Main container is now a column */
                             padding: 0 5px 10px 5px;
-                            border-bottom: 1px solid #ccc; /* Separador entre bloques */
+                            border-bottom: 1px solid #ccc;
                             margin-bottom: 10px;
                         ">
-                            <div style="flex: 1; padding: 5px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                                <p style="font-size: 0.8em; color: ${PRIMARY_BLUE}; margin: 0; font-weight: bold; text-transform: uppercase; text-align: center; word-break: break-word;">${localName.toUpperCase()}</p>
-                                <div id="local-score-value" style="font-size: 2.2em; font-weight: 900; color: ${PRIMARY_BLUE}; border: 3px solid ${PRIMARY_BLUE}; border-radius: 4px; padding: 5px; display: inline-block; min-width: 60px;">${localScore}</div>
+                            <!-- Team Names Row -->
+                            <div style="
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: flex-start; /* Align names at the top */
+                                margin-bottom: 5px; /* Small separation between names and scores */
+                            ">
+                                <p style="flex: 1; font-size: 0.8em; color: ${PRIMARY_BLUE}; margin: 0; font-weight: bold; text-transform: uppercase; word-break: break-word; min-height: 2em; text-align: center;">${localName.toUpperCase()}</p>
+                                <p style="flex: 1; font-size: 0.8em; color: ${PRIMARY_BLUE}; margin: 0; font-weight: bold; text-transform: uppercase; word-break: break-word; min-height: 2em; text-align: center;">${visitName.toUpperCase()}</p>
                             </div>
-                            <div style="flex: 1; padding: 5px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                                <p style="font-size: 0.8em; color: ${PRIMARY_BLUE}; margin: 0; font-weight: bold; text-transform: uppercase; text-align: center; word-break: break-word;">${visitName.toUpperCase()}</p>
-                                <div id="visit-score-value" style="font-size: 2.2em; font-weight: 900; color: ${PRIMARY_BLUE}; border: 3px solid ${PRIMARY_BLUE}; border-radius: 4px; padding: 5px; display: inline-block; min-width: 60px;">${visitScore}</div>
+
+                            <!-- Scores Row -->
+                            <div style="
+                                display: flex;
+                                justify-content: space-around; /* Use space-around to center scores within their half */
+                                align-items: center; /* Vertically center scores if heights differed */
+                                width: 100%;
+                            ">
+                                <div id="local-score-value" style="font-size: 2.2em; font-weight: 900; color: ${PRIMARY_BLUE}; border: 3px solid ${PRIMARY_BLUE}; border-radius: 4px; padding: 5px; min-width: 60px; text-align: center;">${localScore}</div>
+                                <div id="visit-score-value" style="font-size: 2.2em; font-weight: 900; color: ${PRIMARY_BLUE}; border: 3px solid ${PRIMARY_BLUE}; border-radius: 4px; padding: 5px; min-width: 60px; text-align: center;">${visitScore}</div>
                             </div>
                         </div>
             <!-- Bloque 2: Estadísticas Equipo Local -->
