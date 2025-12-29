@@ -6,6 +6,7 @@ const API_BASE_URL = "https://streaming.optimalwayconsulting.com/register/fcbq-"
 
 let previousScores = { local: null, visit: null };
 let eventSource = null; 
+let intervalId = null; // New variable to store the interval ID
 
 function extractMatchId() {
     // La URL de ejemplo es: https://streaming.optimalwayconsulting.com/register/fcbq-247415/...
@@ -25,6 +26,7 @@ function extractMatchId() {
 
 function processMatchData(data) {
     const rawJson = data;
+    // console.log("Raw JSON data received:", rawJson); // Removed after user provided structure info
 
     if (!rawJson || !rawJson.teams || rawJson.teams.length < 2) {
         console.error("Error: Datos de equipos no encontrados en el JSON del stream.");
@@ -34,10 +36,32 @@ function processMatchData(data) {
     const localTeam = rawJson.teams[0];
     const visitTeam = rawJson.teams[1]; 
     
-    // --- EXTRACCIÓN DEL MARCADOR ---
-    const localScore = rawJson.score ? rawJson.score.local : (localTeam.data ? localTeam.data.score : 0);
-    const visitScore = rawJson.score ? rawJson.score.visit : (visitTeam.data ? visitTeam.data.score : 0);
-    
+    // --- EXTRACCIÓN DEL MARCADOR TOTAL (Suma de periodos) ---
+    let totalLocalScore = 0;
+    let totalVisitScore = 0;
+
+    // Sumar puntos de todos los periodos
+    if (localTeam.periods && Array.isArray(localTeam.periods)) {
+        localTeam.periods.forEach(period => {
+            if (period.score !== undefined) {
+                totalLocalScore += period.score;
+            }
+        });
+    }
+    if (visitTeam.periods && Array.isArray(visitTeam.periods)) {
+        visitTeam.periods.forEach(period => {
+            if (period.score !== undefined) {
+                totalVisitScore += period.score;
+            }
+        });
+    }
+
+    // Según la confirmación del usuario, el total es la suma de los periodos.
+    // Asumimos que no es necesario añadir 'localTeam.data.score' por separado
+    // si 'periods' ya contiene todos los scores acumulados (incluyendo el actual).
+    const finalLocalScore = totalLocalScore;
+    const finalVisitScore = totalVisitScore;
+
     const localName = localTeam.name;         
     const visitName = visitTeam.name;         
     
@@ -73,9 +97,9 @@ function processMatchData(data) {
     // 1. LLAMADA A LA FUNCIÓN DE INYECCIÓN (NUEVOS 6 ARGUMENTOS)
     injectScoreboard(
         localName, 
-        localScore, 
+        finalLocalScore, 
         visitName, 
-        visitScore,
+        finalVisitScore,
         localPlayers,   // <-- NUEVO
         visitPlayers    // <-- NUEVO
     );
@@ -93,10 +117,18 @@ function processMatchData(data) {
 // ... (El resto de data.js queda igual) ...
 
 function startLiveUpdate() {
+    // Clear any existing interval to prevent multiple refreshes
+    if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+        console.log("Previous refresh interval cleared.");
+    }
+
     // 1. Limpiar cualquier EventSource o Intervalo anterior
     if (eventSource) {
         eventSource.close();
         eventSource = null;
+        console.log("Previous EventSource connection closed.");
     }
 
     // El matchId en la URL de la página es el mismo que en la URL de streaming
@@ -137,4 +169,11 @@ function startLiveUpdate() {
     };
 
     console.log("Conexión a Live Stream (SSE) establecida.");
+
+    // Set a new interval to refresh every 15 seconds
+    intervalId = setInterval(() => {
+        console.log("Refreshing data due to 15-second interval...");
+        startLiveUpdate();
+    }, 15000);
+    console.log("Data refresh interval set to 15 seconds.");
 }

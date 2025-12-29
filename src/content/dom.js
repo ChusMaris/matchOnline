@@ -28,7 +28,7 @@ function injectBlinkStyles() {
 }
 
 function triggerScoreBlink(teamToBlink) {
-    // [FUNCIÓN PARPADEO - IGUAL QUE ANTES, DURACIÓN 3000ms]
+    // [FUNCIÓN PARPADEO - IGUAL QUE ANTES, DURACIÓN 1500ms]
     const localScoreDiv = document.querySelector('#local-score-value');
     const visitScoreDiv = document.querySelector('#visit-score-value');
     
@@ -50,7 +50,7 @@ function triggerScoreBlink(teamToBlink) {
         elementsToBlink.forEach(el => {
             el.classList.remove('score-blink');
         });
-    }, 3000); 
+    }, 1500); 
 }
 
 // ----------------------------------------------------
@@ -148,40 +148,37 @@ function injectScoreboard(localName, localScore, visitName, visitScore, localPla
                 letter-spacing: 1px;
             ">MARCADOR Y ESTADÍSTICAS EN VIVO</h4>
             
+            <!-- Bloque 1: Marcador (Resultado) -->
             <div style="
                 display: flex; 
                 justify-content: space-between; 
                 align-items: center; 
                 text-align: center;
                 padding: 0 5px 10px 5px;
+                border-bottom: 1px solid #ccc; /* Separador entre bloques */
+                margin-bottom: 10px;
             ">
                 <div style="flex: 1; padding: 5px; border-right: 1px solid #ccc; min-width: 0; display: flex; flex-direction: column; justify-content: center; align-items: center;">
                     <p style="font-size: 0.8em; color: ${PRIMARY_BLUE}; margin: 0 0 10px 0; font-weight: bold; text-transform: uppercase; text-align: center;">${localName.toUpperCase()}</p>
                     <div id="local-score-value" style="font-size: 2.2em; font-weight: 900; color: ${PRIMARY_BLUE}; border: 3px solid ${PRIMARY_BLUE}; border-radius: 4px; padding: 5px; display: inline-block; min-width: 60px;">${localScore}</div>
-                </div>
-                
-                <div style="font-size: 1.5em; font-weight: bold; color: ${PRIMARY_BLUE}; padding: 0 5px; margin-top: 25px;">-</div>
-
+                </div>                
                 <div style="flex: 1; padding: 5px; min-width: 0; display: flex; flex-direction: column; justify-content: center; align-items: center;">
                     <p style="font-size: 0.8em; color: ${PRIMARY_BLUE}; margin: 0 0 10px 0; font-weight: bold; text-transform: uppercase; text-align: center;">${visitName.toUpperCase()}</p>
                     <div id="visit-score-value" style="font-size: 2.2em; font-weight: 900; color: ${PRIMARY_BLUE}; border: 3px solid ${PRIMARY_BLUE}; border-radius: 4px; padding: 5px; display: inline-block; min-width: 60px;">${visitScore}</div>
                 </div>
             </div>
 
-            <hr style="border: 0; height: 1px; background-color: #ccc; width: 95%; margin: 5px auto 10px auto;">
-
-            <div style="display: flex; justify-content: space-between; padding: 0 5px 10px 5px;">
-                <div style="flex: 1; padding: 0 5px; border-right: 1px solid #ddd; min-width: 0;">
-                    <h5 style="text-align: center; color: ${PRIMARY_BLUE}; margin: 0 0 5px 0; font-size: 0.8em;">Estadísticas</h5>
-                    ${generatePlayerListHTML(localPlayers, PRIMARY_BLUE)}
-                </div>
-                
-                <div style="flex: 1; padding: 0 5px; min-width: 0;">
-                    <h5 style="text-align: center; color: ${PRIMARY_BLUE}; margin: 0 0 5px 0; font-size: 0.8em;">Estadísticas</h5>
-                    ${generatePlayerListHTML(visitPlayers, PRIMARY_BLUE)}
-                </div>
+            <!-- Bloque 2: Estadísticas Equipo Local -->
+            <div style="padding: 0 5px 10px 5px; border-bottom: 1px solid #ccc; margin-bottom: 10px;">
+                <h5 style="text-align: center; color: ${PRIMARY_BLUE}; margin: 0 0 5px 0; font-size: 0.8em;">ESTADÍSTICAS LOCAL (${localName.toUpperCase()})</h5>
+                ${generatePlayerListHTML(localPlayers, PRIMARY_BLUE)}
             </div>
-
+            
+            <!-- Bloque 3: Estadísticas Equipo Rival -->
+            <div style="padding: 0 5px 10px 5px;">
+                <h5 style="text-align: center; color: ${PRIMARY_BLUE}; margin: 0 0 5px 0; font-size: 0.8em;">ESTADÍSTICAS RIVAL (${visitName.toUpperCase()})</h5>
+                ${generatePlayerListHTML(visitPlayers, PRIMARY_BLUE)}
+            </div>
         </div>
     `;
     
