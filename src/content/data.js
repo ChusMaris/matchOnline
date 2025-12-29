@@ -72,7 +72,8 @@ function processMatchData(data) {
         dorsal: player.dorsal || '',
         name: player.name || 'Desconocido',
         points: player.data ? (player.data.score || 0) : 0, // Puntos
-        fouls: player.data ? (player.data.personal || 0) : 0 // Faltas Personales
+        fouls: player.data ? (player.data.personal || 0) : 0, // Faltas Personales
+        timePlayed: player.timePlayed // Minutos jugados
     });
 
     const localPlayers = localTeam.players ? localTeam.players.map(mapPlayerData) : [];
@@ -170,10 +171,10 @@ function startLiveUpdate() {
 
     console.log("Conexión a Live Stream (SSE) establecida.");
 
-    // Set a new interval to refresh every 15 seconds
+    // Set a new interval to refresh every 10 seconds
     intervalId = setInterval(() => {
         console.log("Refreshing data due to 15-second interval...");
         startLiveUpdate();
-    }, 15000);
+    }, 10000);
     console.log("Data refresh interval set to 15 seconds.");
 }
