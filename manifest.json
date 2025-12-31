@@ -1,37 +1,32 @@
 {
-    "manifest_version": 2,
-    "name": "Basquet Catala Stats Extractor",
-    "version": "1.0",
-    "description": "Extrae estadísticas detalladas de partidos de Basquet Catala.",
-    
-    "icons": {
-        "48": "icon-48.png" 
-    },
+  "manifest_version": 2,
+  "description": "Marcador en vivo para partidos de Basquet Catala",
+  
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "MatchOnlineStats@sergio.delgado",
+      "strict_min_version": "58.0"
+    }
+  },
+  "name": "MatchOnlineStats",
+  "version": "1.3",
+  "custom_license": "MIT License. Cualquiera puede usar este código.",
 
-    "background": {
-        "scripts": ["src/background.js"], 
-        "persistent": false
-    },
-    
-    "permissions": [
-        "webRequest", 
-        "webRequestBlocking", 
-        "https://www.basquetcatala.cat/*", 
-        "https://msstats.optimalwayconsulting.com/*",
-        "https://streaming.optimalwayconsulting.com/*"
-    ],
-    "content_security_policy": {
-        "extension_pages": "script-src 'self'; object-src 'self'; connect-src * https://streaming.optimalwayconsulting.com;"
-    },
-    "content_scripts": [ 
-        {
-            "matches": ["https://www.basquetcatala.cat/directe/*"],
-            "js": [
-                "src/content/dom.js",    // 1. Funciones de DOM (para que estén disponibles)
-                "src/content/data.js",   // 2. Lógica de datos (que usa funciones de dom.js)
-                "src/content/index.js"   // 3. Punto de inicio (que llama a una función de data.js)
-            ],
-            "run_at": "document_idle"
-        }
-    ]
+  "permissions": [
+    "https://www.basquetcatala.cat/*",
+    "https://streaming.optimalwayconsulting.com/*"
+  ],
+
+  "content_scripts": [
+    {
+      "matches": ["https://www.basquetcatala.cat/directe/*"],
+      "js": [
+        "src/content/dom.js",
+        "src/content/data.js",
+        "src/content/index.js"
+      ]
+    }
+  ],
+
+  "content_security_policy": "script-src 'self'; object-src 'self'"
 }
