@@ -72,8 +72,7 @@ function processMatchData(data) {
         dorsal: player.dorsal || '',
         name: player.name || 'Desconocido',
         points: player.data ? (player.data.score || 0) : 0, // Puntos
-        fouls: player.data ? (player.data.personal || 0) : 0, // Faltas Personales
-        timePlayed: player.timePlayed // Minutos jugados
+        fouls: player.data ? (player.data.personal || 0) : 0 // Faltas Personales
     });
 
     const localPlayers = localTeam.players ? localTeam.players.map(mapPlayerData) : [];

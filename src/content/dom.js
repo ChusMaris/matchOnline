@@ -94,10 +94,9 @@ function generatePlayerListHTML(players, teamColor) {
                 <thead>
                     <tr style="border-bottom: 1px solid #ddd; color: ${teamColor};">
                         <th style="width: 10%; padding: 5px 0; text-align: center;">#</th>
-                        <th style="width: 35%; padding: 5px 0;">Jugador</th>
+                        <th style="width: 50%; padding: 5px 0;">Jugador</th>
                         <th style="width: 15%; padding: 5px 0; text-align: center;">Ptos</th>
-                        <th style="width: 25%; padding: 5px 0; text-align: center;">Min</th>
-                        <th style="width: 15%; padding: 5px 0; text-align: center;">Faltas</th>
+                        <th style="width: 25%; padding: 5px 0; text-align: center;">Faltas</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -106,7 +105,6 @@ function generatePlayerListHTML(players, teamColor) {
                             <td style="padding: 4px 0; font-weight: bold; color: #555; text-align: center;">${player.dorsal}</td>
                             <td style="padding: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${player.name}</td>
                             <td style="padding: 4px 0; text-align: center; font-weight: bold;">${player.points}</td>
-                            <td style="padding: 4px 0; text-align: center;">${player.timePlayed || '-'}</td>
                             <td style="padding: 4px 0; text-align: center;">${createFoulDots(player.fouls)}</td>
                         </tr>
                     `).join('')}
