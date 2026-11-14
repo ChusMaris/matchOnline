@@ -1,2 +1,2 @@
 // --- src/content/index.js ---
-startLiveUpdate();
+void initializeLiveUpdates();
