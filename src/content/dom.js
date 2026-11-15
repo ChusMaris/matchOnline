@@ -207,4 +207,8 @@ function injectScoreboard(localName, localScore, visitName, visitScore, localPla
             document.body.insertAdjacentElement('afterbegin', mainContainer);
         }
     }
+
+    if (typeof ensureLiveImportPanel === 'function') {
+        ensureLiveImportPanel();
+    }
 }
