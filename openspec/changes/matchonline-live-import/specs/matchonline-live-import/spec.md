@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Initialize a live import once per direct match
-The matchOnline extension SHALL support Firefox Nightly on Android and provide a mobile-usable import form integrated immediately above the live scoreboard on Basquet Catala direct-match URLs with paths `/directe/<id>` or `/estadistica/directe/<id>`. The form SHALL load the existing federation catalog options and allow the user to enter season, category, competition, matchday, and interval metadata using touch controls. It SHALL retain metadata, interval, and import status by tab and numeric direct-match ID, and SHALL NOT start importing until the user explicitly starts it. While importing is active, all metadata and interval fields SHALL be disabled; canceling the import SHALL re-enable them.
+The matchOnline extension SHALL support Firefox Nightly on Android and provide a mobile-usable import form integrated immediately above the live scoreboard on Basquet Catala direct-match URLs with paths `/directe/<id>` or `/estadistica/directe/<id>`. The form SHALL load the existing federation catalog options and allow the user to enter season, category, competition, and matchday metadata using touch controls. It SHALL retain metadata and import status by tab and numeric direct-match ID, and SHALL NOT start importing until the user explicitly starts it. While importing is active, all metadata fields SHALL be disabled; canceling the import SHALL re-enable them.
 
 #### Scenario: Start importing a direct match on Firefox Nightly Android
 - **WHEN** the user opens a direct-match URL in Firefox Nightly on Android and starts an import from the form above the live scoreboard
@@ -35,24 +35,56 @@ The matchOnline extension SHALL support Firefox Nightly on Android and provide a
 - **WHEN** a tab is not on a supported direct-match URL
 - **THEN** it does not start an import and explains that a live direct-match page is required
 
-### Requirement: Send live snapshots on a configurable cadence
-While an import is active, each detected change in the live SSE data SHALL trigger a fresh, uncached request for the complete federation snapshot. The extension SHALL submit each changed complete snapshot to the federation import endpoint with the statistics payload, play-by-play payload, metadata, source URL, and numeric `liveMatchId`. The refresh interval SHALL default to 5 seconds and accept integer values from 5 through 60 seconds. A snapshot lacking required data SHALL NOT be represented as a successful or fabricated import. Import failures SHALL NOT stop the existing live scoreboard.
+### Requirement: Follow the page's native live-data refresh
+The extension SHALL load its page hook as a Firefox `MAIN`-world content script at `document_start`, register its observer for the custom live-match event through `EventSource.prototype.addEventListener` before the page's matching listener, and SHALL NOT open or periodically reconnect a second EventSource for the same match. The extension SHALL observe page-owned XHR/fetch requests for the direct match on `streaming.optimalwayconsulting.com`, record request start and response capture times, and use the resulting complete statistics/play-by-play snapshot for the API submission. It SHALL NOT issue a duplicate credentialed request for the same snapshot. A changed SSE state SHALL update the extension scoreboard immediately; a page response whose request began before a newer SSE state SHALL NOT overwrite that newer scoreboard state or be submitted as current. The extension SHALL submit each changed complete snapshot to the federation import endpoint with the statistics payload, play-by-play payload, metadata, source URL, and numeric `liveMatchId`. A snapshot lacking required data SHALL NOT be represented as a successful or fabricated import. Import failures SHALL NOT stop the existing live scoreboard.
 
 #### Scenario: Submit a new snapshot
 - **WHEN** an active direct match receives a new complete snapshot
 - **THEN** the extension submits that snapshot and the stored metadata and direct-match ID to the API
 
-#### Scenario: Refresh the full snapshot after a live SSE change
-- **WHEN** an active direct match receives changed scoreboard or player data through SSE
-- **THEN** the extension requests a fresh complete federation snapshot and submits it if its content has changed
+#### Scenario: Submit the page's native refresh response
+- **WHEN** the page completes its own XHR/fetch refresh with a complete direct-match snapshot during an active import
+- **THEN** the extension submits that response without issuing a duplicate snapshot request
 
 #### Scenario: Render the live scoreboard before the first SSE event
 - **WHEN** a complete federation snapshot is captured before any SSE event arrives
 - **THEN** the extension renders its scoreboard and player statistics below the import form, then continues to apply subsequent SSE updates
 
-#### Scenario: Apply a custom interval
-- **WHEN** the user saves a valid interval in the integrated form for a direct match
-- **THEN** the live refresh uses that interval and the setting persists when the page is reopened in that tab
+#### Scenario: Reuse the page's live SSE connection
+- **WHEN** the page receives its custom live-match SSE event
+- **THEN** the extension receives the same event without creating or periodically reconnecting another EventSource
+
+#### Scenario: Capture the stream before page subscriptions
+- **WHEN** a direct-match page initializes its EventSource after document start
+- **THEN** the main-world hook observes the custom event listener before the page registers it
+
+#### Scenario: Match the observed SSE registration route
+- **WHEN** the page connects to `/streaming/register/fcbq-<id>/<nonce>` on `streaming.optimalwayconsulting.com`
+- **THEN** the hook forwards the matching `fcbq-<id>` event, while continuing to support `/register/fcbq-<id>/<nonce>`
+
+#### Scenario: Forward the event before the page listener
+- **WHEN** the page's custom-event listener stops immediate propagation
+- **THEN** the extension has already received the event and updates its scoreboard
+
+#### Scenario: Update the extension scoreboard immediately
+- **WHEN** a changed live-match SSE event reaches the page
+- **THEN** the extension scoreboard updates from that event without waiting for the API request to finish
+
+#### Scenario: Do not roll back a newer live scoreboard
+- **WHEN** a full snapshot captured before a newer SSE event arrives afterward
+- **THEN** the extension keeps the scoreboard state from the newer SSE event
+
+#### Scenario: Log the live event that triggers an import snapshot
+- **WHEN** an active import receives a changed SSE scoreboard event
+- **THEN** the activity log records its score without initiating a second network request
+
+#### Scenario: Trace the page's refresh
+- **WHEN** the page starts and completes a matching XHR/fetch request
+- **THEN** the activity log records the request path and when its response was captured
+
+#### Scenario: Wait for an SSE update instead of polling
+- **WHEN** no new live-match SSE event arrives
+- **THEN** the extension does not open a second stream or issue a duplicate snapshot request
 
 #### Scenario: Prevent overlapping submissions
 - **WHEN** a new snapshot arrives while an API request for the same direct-match ID is still pending

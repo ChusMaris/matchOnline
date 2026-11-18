@@ -107,8 +107,8 @@ test("serializes the same match across tabs and keeps other tabs queued when one
     const harness = createHarness([
         { id: 1, url: "https://www.basquetcatala.cat/directe/302113" },
         { id: 2, url: "https://www.basquetcatala.cat/estadistica/directe/302113" }
-    ], (_url, init) => new Promise(resolve => {
-        requests.push({ body: JSON.parse(init.body), resolve });
+    ], (url, init) => new Promise(resolve => {
+        requests.push({ url, body: JSON.parse(init.body), resolve });
     }));
     const key1 = "liveImport:1:302113";
     const key2 = "liveImport:2:302113";
@@ -131,6 +131,8 @@ test("serializes the same match across tabs and keeps other tabs queued when one
     await waitFor(() => requests.length === 2);
     assert.equal(requests[0].body.metadata.categoria, "A");
     assert.equal(requests[1].body.metadata.categoria, "B");
+    assert.equal(requests[0].url, "https://scrapertosupabase.onrender.com/api/federation/live-import");
+    assert.equal(requests[1].url, requests[0].url);
 
     requests[1].resolve({ ok: true, json: async () => ({ ok: true }) });
     await waitFor(() => harness.storage[key2].status === "active");

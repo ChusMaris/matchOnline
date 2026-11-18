@@ -5,11 +5,11 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "MatchOnlineStats@sergio.delgado",
-      "strict_min_version": "58.0"
+      "strict_min_version": "128.0"
     }
   },
   "name": "MatchOnlineStats",
-  "version": "1.4.8",
+  "version": "1.4.17",
 
   "permissions": [
     "https://www.basquetcatala.cat/*",
@@ -27,21 +27,24 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.basquetcatala.cat/*"
+        "https://www.basquetcatala.cat/directe/*",
+        "https://www.basquetcatala.cat/estadistica/directe/*"
       ],
+      "js": ["src/content/page-hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://www.basquetcatala.cat/*"],
       "js": [
         "src/content/dom.js",
-        "src/content/live-import.js",
         "src/content/data.js",
+        "src/content/live-import.js",
         "src/content/index.js"
       ],
       "css": ["src/style.css"],
       "run_at": "document_start"
     }
-  ],
-
-  "web_accessible_resources": [
-    "src/content/page-hook.js"
   ],
 
   "content_security_policy": "script-src 'self'; object-src 'self'",

@@ -1,14 +1,12 @@
-const STREAM_BASE_URL = "https://streaming.optimalwayconsulting.com/register/fcbq-";
 const PAGE_CAPTURE_CHANNEL = "__matchonline_federation_capture__";
-const DEFAULT_REFRESH_SECONDS = 5;
 
 let previousScores = { local: null, visit: null };
-let eventSource = null;
-let intervalId = null;
-let refreshIntervalSeconds = DEFAULT_REFRESH_SECONDS;
 let importSettings = null;
 let lastSnapshotSignature = null;
 let lastStreamSignature = null;
+let streamHookError = null;
+let lastStreamUpdateAt = null;
+let captureActivityQueue = Promise.resolve();
 
 function extractMatchId() {
     const match = window.location.pathname.match(/\/(?:estadistica\/)?directe\/(\d+)(?:\/|$)/);
@@ -17,25 +15,6 @@ function extractMatchId() {
 
 const liveMatchId = extractMatchId();
 let settingsKey = null;
-
-function injectPageHook() {
-    if (!settingsKey || document.getElementById("matchonline-page-hook")) return;
-    const script = document.createElement("script");
-    script.id = "matchonline-page-hook";
-    script.src = browser.runtime.getURL("src/content/page-hook.js");
-    script.onload = () => {
-        script.remove();
-        requestCapturedPayloads(true);
-    };
-    script.onerror = () => {
-        script.remove();
-        void updateStoredStatus({
-            status: "failed",
-            error: "No se pudo instalar la captura de payloads de la página."
-        });
-    };
-    (document.documentElement || document.head).appendChild(script);
-}
 
 function processMatchData(rawJson) {
     if (!rawJson || !rawJson.teams || rawJson.teams.length < 2) {
@@ -81,11 +60,19 @@ function processMatchData(rawJson) {
     console.log(`[STREAM] Nuevo marcador: ${finalLocalScore} - ${finalVisitScore} (Jugadores actualizados)`);
     if (streamChanged) {
         lastStreamSignature = streamSignature;
-        if (importSettings?.active) requestCapturedPayloads(true);
+        lastStreamUpdateAt = Date.now();
+        if (importSettings?.active) {
+            void appendCaptureActivity(`Evento SSE recibido: ${finalLocalScore}-${finalVisitScore}.`)
+                .catch(error => console.error("No se pudo registrar el evento SSE.", error));
+        }
     }
 }
 
-function renderCapturedScoreboard(statsPayload) {
+function renderCapturedScoreboard(statsPayload, requestStartedAt) {
+    const requestStartedAtMs = Date.parse(requestStartedAt ?? "");
+    if (lastStreamUpdateAt !== null
+        && (!Number.isFinite(requestStartedAtMs) || requestStartedAtMs < lastStreamUpdateAt)) return;
+
     const header = statsPayload?.header;
     const localTeam = header?.localTeam;
     const visitTeam = header?.visitorTeam;
@@ -121,41 +108,6 @@ function renderCapturedScoreboard(statsPayload) {
     previousScores = { local: localScore, visit: visitScore };
 }
 
-function startLiveUpdate() {
-    if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
-    }
-    if (eventSource) {
-        eventSource.close();
-        eventSource = null;
-    }
-    if (!liveMatchId) {
-        console.info("Content Script: Esta página no es un partido directo.");
-        return;
-    }
-
-    const apiUrl = `${STREAM_BASE_URL}${liveMatchId}/${Math.random()}`;
-    try {
-        eventSource = new EventSource(apiUrl);
-    } catch (error) {
-        console.error("Error al crear EventSource.", error);
-        return;
-    }
-
-    eventSource.addEventListener(`fcbq-${liveMatchId}`, event => {
-        try {
-            processMatchData(JSON.parse(event.data));
-        } catch (error) {
-            console.error("Error al parsear o procesar datos del stream:", error);
-        }
-    });
-    eventSource.onerror = error => console.warn("EventSource error (conexión perdida o fallida).", error);
-
-    intervalId = setInterval(startLiveUpdate, refreshIntervalSeconds * 1000);
-    console.log(`Intervalo de actualización del marcador: ${refreshIntervalSeconds} segundos.`);
-}
-
 async function readImportSettings() {
     if (!settingsKey) return null;
     const result = await browser.storage.local.get(settingsKey);
@@ -176,25 +128,59 @@ async function updateStoredStatus(patch) {
     await browser.storage.local.set({ [settingsKey]: next });
 }
 
-function requestCapturedPayloads(refresh = false) {
+function appendCaptureActivity(message) {
+    const at = new Date().toISOString();
+    const write = captureActivityQueue.then(async () => {
+        if (!settingsKey) return;
+        const current = await readImportSettings();
+        if (!current?.active) return;
+        const activityLog = Array.isArray(current.activityLog) ? current.activityLog : [];
+        await browser.storage.local.set({
+            [settingsKey]: {
+                ...current,
+                activityLog: [...activityLog, { at, message }].slice(-10)
+            }
+        });
+    });
+    captureActivityQueue = write.catch(error => {
+        console.error("No se pudo guardar la actividad de captura.", error);
+    });
+    return write;
+}
+
+function requestCapturedPayloads() {
     window.postMessage({
         channel: PAGE_CAPTURE_CHANNEL,
-        type: "GET_PAYLOADS",
-        refresh
+        type: "GET_PAYLOADS"
     }, window.location.origin);
 }
 
-function handleCapturedPayloads(payloads) {
+function handleCapturedPayloads(payloads, captureDetails = {}) {
     const statsPayload = payloads?.statsPayload;
     const pbpPayload = payloads?.pbpPayload;
-    if (statsPayload?.header) renderCapturedScoreboard(statsPayload);
+    if (statsPayload?.header) {
+        renderCapturedScoreboard(
+            statsPayload,
+            captureDetails.requestStartedAt ?? payloads?.requestStartedAt
+        );
+    }
+    if (captureDetails.fresh && importSettings?.active) {
+        const source = captureDetails.sourcePath || payloads?.sourcePath || "origen desconocido";
+        void appendCaptureActivity(`Datos recibidos de la web: ${source}.`)
+            .catch(error => console.error("No se pudo registrar la respuesta de la web.", error));
+    }
     if (!importSettings?.active) return;
     if (!statsPayload?.header || !Array.isArray(statsPayload.boxscore)
         || !Array.isArray(pbpPayload?.playByPlay)) {
-        void updateStoredStatus({
-            status: "failed",
-            error: "No se han capturado todavía los payloads completos de estadísticas y play-by-play."
-        });
+        return;
+    }
+
+    const requestStartedAt = captureDetails.requestStartedAt ?? payloads?.requestStartedAt;
+    const requestStartedAtMs = Date.parse(requestStartedAt ?? "");
+    if (lastStreamUpdateAt !== null
+        && (!Number.isFinite(requestStartedAtMs) || requestStartedAtMs < lastStreamUpdateAt)) {
+        void appendCaptureActivity("Snapshot anterior al último SSE; esperando el siguiente refresco de la web.")
+            .catch(error => console.error("No se pudo registrar el snapshot atrasado.", error));
         return;
     }
 
@@ -220,7 +206,37 @@ function handleCapturedPayloads(payloads) {
 window.addEventListener("message", event => {
     if (event.source !== window || event.origin !== window.location.origin
         || event.data?.channel !== PAGE_CAPTURE_CHANNEL) return;
-    if (event.data.type === "PAYLOADS") handleCapturedPayloads(event.data.payloads);
+    if (event.data.type === "PAGE_REFRESH_STARTED" && importSettings?.active) {
+        const source = event.data.sourcePath || "origen desconocido";
+        void appendCaptureActivity(`La web inicia actualización: ${source}.`)
+            .catch(error => console.error("No se pudo registrar el inicio de actualización.", error));
+    }
+    if (event.data.type === "PAYLOADS") {
+        try {
+            handleCapturedPayloads(event.data.payloads, event.data);
+        } catch (error) {
+            console.error("Error al procesar el snapshot capturado.", error);
+            if (importSettings?.active) {
+                void updateStoredStatus({
+                    status: "failed",
+                    error: error instanceof Error ? error.message : String(error)
+                });
+            }
+        }
+    }
+    if (event.data.type === "STREAM_EVENT") {
+        try {
+            processMatchData(JSON.parse(event.data.data));
+        } catch (error) {
+            console.error("Error al parsear o procesar datos del stream:", error);
+        }
+    }
+    if (event.data.type === "STREAM_HOOK_ERROR") {
+        streamHookError = event.data.error || "No se pudo observar el stream SSE de la página.";
+        if (importSettings?.active) {
+            void updateStoredStatus({ status: "failed", error: streamHookError });
+        }
+    }
     if (event.data.type === "CAPTURE_ERROR" && importSettings?.active) {
         void updateStoredStatus({ status: "failed", error: event.data.error });
     }
@@ -230,15 +246,11 @@ browser.storage.onChanged.addListener((changes, areaName) => {
     if (areaName !== "local" || !settingsKey || !changes[settingsKey]) return;
     const previous = importSettings;
     importSettings = changes[settingsKey].newValue ?? null;
-    const nextInterval = Number(importSettings?.intervalSeconds);
-    if (Number.isInteger(nextInterval) && nextInterval >= 5 && nextInterval <= 60
-        && nextInterval !== refreshIntervalSeconds) {
-        refreshIntervalSeconds = nextInterval;
-        startLiveUpdate();
-    }
     if (!previous?.active && importSettings?.active) {
         lastSnapshotSignature = null;
-        requestCapturedPayloads(true);
+        void appendCaptureActivity("Importación iniciada; esperando la actualización de datos de la web.")
+            .catch(error => console.error("No se pudo registrar el inicio de importación.", error));
+        requestCapturedPayloads();
     }
 });
 
@@ -249,14 +261,8 @@ async function initializeLiveUpdates() {
         settingsKey = context.storageKey;
         importSettings = await readImportSettings();
         if (!importSettings) importSettings = context.state ?? null;
-        const savedInterval = Number(importSettings?.intervalSeconds);
-        if (Number.isInteger(savedInterval) && savedInterval >= 5 && savedInterval <= 60) {
-            refreshIntervalSeconds = savedInterval;
-        }
     } catch (error) {
         console.error("No se pudo leer la configuración de importación.", error);
     }
-    injectPageHook();
-    startLiveUpdate();
-    if (importSettings?.active) requestCapturedPayloads(true);
+    requestCapturedPayloads();
 }

@@ -164,7 +164,7 @@ const processSnapshots = async liveMatchId => {
                 activityLog: activityLogWith(settings, "Enviando actualización a la API.")
             });
             try {
-                const response = await fetch(`${API_BASE_URL}/import`, {
+                const response = await fetch(`${API_BASE_URL}/live-import`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({

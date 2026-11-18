@@ -46,8 +46,7 @@ function updateImportPanel(panel, state) {
     fields.hidden = active;
     summary.hidden = !active;
     summaryLines[0].textContent = `${state?.metadata?.temporada ?? ""} · ${state?.metadata?.categoria ?? ""}`;
-    summaryLines[1].textContent =
-        `${state?.metadata?.competicion ?? ""} · Jornada ${state?.metadata?.jornada ?? ""} · Cada ${state?.intervalSeconds ?? 5} s`;
+    summaryLines[1].textContent = `${state?.metadata?.competicion ?? ""} · Jornada ${state?.metadata?.jornada ?? ""}`;
     startButton.hidden = active;
     startButton.disabled = !storageKey;
     cancelButton.hidden = !active;
@@ -106,9 +105,6 @@ async function loadImportContext(panel) {
                 }
             }
         }
-        const savedInterval = Number(currentState?.intervalSeconds);
-        form.elements.namedItem("intervalo").value =
-            String(Number.isInteger(savedInterval) && savedInterval >= 5 && savedInterval <= 60 ? savedInterval : 5);
         updateImportPanel(panel, currentState);
 
         try {
@@ -202,13 +198,6 @@ function createImportPanel() {
         min: 1,
         step: 1
     });
-    addField("Intervalo de actualización (segundos)", "matchonline-interval", "intervalo", {
-        type: "number",
-        min: 5,
-        max: 60,
-        step: 1,
-        value: 5
-    });
     const errorNode = document.createElement("p");
     errorNode.id = "matchonline-import-error";
     errorNode.className = "matchonline-import-error";
@@ -255,15 +244,9 @@ function createImportPanel() {
             competicion: String(values.get("competicion") ?? "").trim(),
             jornada: Number(values.get("jornada"))
         };
-        const intervalSeconds = Number(values.get("intervalo"));
-
         if (Object.values(metadata).some(value => value === "" || value === 0)
             || !Number.isInteger(metadata.jornada) || metadata.jornada < 1) {
             showImportError(panel, "Completa temporada, categoría, competición y una jornada válida.");
-            return;
-        }
-        if (!Number.isInteger(intervalSeconds) || intervalSeconds < 5 || intervalSeconds > 60) {
-            showImportError(panel, "El intervalo debe ser un número entero entre 5 y 60 segundos.");
             return;
         }
 
@@ -273,7 +256,6 @@ function createImportPanel() {
                 liveMatchId: directMatchId,
                 tabId: Number(storageKey.split(":")[1]),
                 metadata,
-                intervalSeconds,
                 activityLog: addActivityEntry(currentState, "Importación iniciada."),
                 sessionId: globalThis.crypto?.randomUUID?.()
                     ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,

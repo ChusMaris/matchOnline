@@ -65,9 +65,10 @@ test("builds the editable import panel with all metadata inputs", () => {
     );
 
     assert.ok(panel.querySelector("#matchonline-import-fields"));
-    for (const name of ["temporada", "categoria", "competicion", "jornada", "intervalo"]) {
+    for (const name of ["temporada", "categoria", "competicion", "jornada"]) {
         assert.ok(panel.querySelector("#matchonline-import-form").elements.namedItem(name));
     }
+    assert.equal(panel.querySelector("#matchonline-import-form").elements.namedItem("intervalo"), null);
     assert.equal(panel.querySelector("#matchonline-import-cancel").hidden, true);
 });
 
@@ -112,10 +113,11 @@ test("hides and disables fields while importing, then restores them on cancel", 
         }
     );
 
-    applyState({ active: true, status: "active", metadata: {}, intervalSeconds: 5 });
+    applyState({ active: true, status: "active", metadata: {} });
     assert.equal(fields.hidden, true);
     assert.equal(input.disabled, true);
     assert.equal(elements.get("#matchonline-import-summary").hidden, false);
+    assert.doesNotMatch(summaryLines[1].textContent, /Cada/);
     assert.equal(startButton.hidden, true);
     assert.equal(cancelButton.hidden, false);
 
